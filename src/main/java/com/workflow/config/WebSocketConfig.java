@@ -22,7 +22,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // Endpoint de conexión WebSocket con fallback SockJS
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("http://localhost:4200")
+                .setAllowedOriginPatterns(
+                    "http://localhost:4200",
+                    "http://18.222.251.205",
+                    "http://18.222.251.205:80",
+                    "http://18.222.251.205:4200",
+                    "http://18.222.251.205:8000"
+                )
                 .withSockJS();
     }
 }
