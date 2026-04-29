@@ -136,7 +136,7 @@ public class InstanciaService {
     }
 
     public ProcessInstance tomarTarea(String tareaId, String idUsuario, String nombreUsuario) {
-        workflowEngine.claimarTarea(tareaId, idUsuario);
+        workflowEngine.claimarTarea(tareaId, idUsuario, nombreUsuario);
         ActiveTask tarea = activeTaskRepository.findById(tareaId)
                 .orElseThrow(() -> new Exceptions.ResourceNotFoundException("Tarea no encontrada: " + tareaId));
         return findById(tarea.getIdInstancia());

@@ -195,6 +195,10 @@ public class WorkflowEngine {
      */
     @Transactional
     public ActiveTask claimarTarea(String tareaId, String usuarioId) {
+        return claimarTarea(tareaId, usuarioId, null);
+    }
+
+    public ActiveTask claimarTarea(String tareaId, String usuarioId, String nombreUsuario) {
         ActiveTask tarea = activeTaskRepo.findById(tareaId)
                 .orElseThrow(() -> new WorkflowException("Tarea no encontrada: " + tareaId));
 
@@ -204,6 +208,7 @@ public class WorkflowEngine {
         }
 
         tarea.setIdUsuarioAsignado(usuarioId);
+        tarea.setNombreUsuario(nombreUsuario);
         tarea.setSemaforo(TrafficLight.AMARILLO);   // stateId=1: en progreso
         tarea.setFechaInicio(Instant.now());
         activeTaskRepo.save(tarea);
@@ -251,6 +256,7 @@ public class WorkflowEngine {
                 .etiquetaNodo(etiquetaNodo)
                 .idDepartamento(tarea.getIdDepartamentoAsignado())
                 .idUsuario(tarea.getIdUsuarioAsignado())
+                .nombreUsuario(tarea.getNombreUsuario())
                 .duracionMs(duracionMs)
                 .fueRetrasado(fueRetrasado)
                 .fechaArchivo(fechaArchivo)

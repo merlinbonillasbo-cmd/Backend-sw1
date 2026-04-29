@@ -31,6 +31,8 @@ public class TaskHistory {
 
     private String idUsuario;
 
+    private String nombreUsuario;
+
     private String etiquetaNodo;
 
     // Campos de archivo inspirados en SAFlowNodeInstance.archiveDate y durationMs

@@ -31,6 +31,8 @@ public class ActiveTask {
 
     private String idUsuarioAsignado;
 
+    private String nombreUsuario;
+
     private TrafficLight semaforo;
 
     private TaskPriority prioridad;
