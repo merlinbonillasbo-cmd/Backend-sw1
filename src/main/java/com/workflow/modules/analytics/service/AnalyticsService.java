@@ -3,6 +3,7 @@ package com.workflow.modules.analytics.service;
 
 import com.workflow.modules.analytics.dto.CuelloDeBotellaDTO;
 import com.workflow.modules.analytics.dto.DeptAnalyticsDTO;
+import com.workflow.modules.analytics.dto.RendimientoDeptDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Sort;
@@ -128,5 +129,42 @@ public class AnalyticsService {
 
         log.info("[Analytics] Cuellos de botella identificados: {}", cuellos.size());
         return cuellos;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // RENDIMIENTO POR DEPARTAMENTO  (ranking de todos los departamentos)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Agrupa historial_tareas por idDepartamento y calcula métricas.
+     * Retorna todos los departamentos ordenados por totalTareas desc.
+     */
+    public List<RendimientoDeptDTO> getRendimientoPorDepartamentos() {
+
+        Aggregation agg = Aggregation.newAggregation(
+            Aggregation.group("idDepartamento")
+                .count().as("totalTareas")
+                .sum(ConditionalOperators
+                        .when(Criteria.where("fueRetrasado").is(true))
+                        .then(1).otherwise(0))
+                .as("tareasRetrasadas")
+                .avg("duracionMs").as("duracionPromedioMs"),
+            Aggregation.sort(Sort.by(Sort.Direction.DESC, "totalTareas"))
+        );
+
+        AggregationResults<RendimientoDeptDTO> results =
+                mongoTemplate.aggregate(agg, "historial_tareas", RendimientoDeptDTO.class);
+
+        List<RendimientoDeptDTO> lista = results.getMappedResults();
+
+        lista.forEach(dto -> {
+            double pct = dto.getTotalTareas() > 0
+                    ? (dto.getTareasRetrasadas() * 100.0) / dto.getTotalTareas()
+                    : 0.0;
+            dto.setPorcentajeRetraso(Math.round(pct * 100.0) / 100.0);
+        });
+
+        log.info("[Analytics] Rendimiento departamentos: {} registros", lista.size());
+        return lista;
     }
 }

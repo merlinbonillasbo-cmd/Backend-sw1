@@ -4,6 +4,7 @@ package com.workflow.modules.analytics.controller;
 import com.workflow.common.ApiResponse;
 import com.workflow.modules.analytics.dto.CuelloDeBotellaDTO;
 import com.workflow.modules.analytics.dto.DeptAnalyticsDTO;
+import com.workflow.modules.analytics.dto.RendimientoDeptDTO;
 import com.workflow.modules.analytics.service.AnalyticsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -27,7 +28,7 @@ public class AnalyticsController {
                description = "Retorna el top-5 de nodos con mayor tiempo promedio de resolución en todo el sistema. " +
                              "Útil para identificar cuellos de botella a nivel organizacional.")
     @GetMapping("/cuellos")
-    @PreAuthorize("hasAnyRole('ADMIN', 'JEFE_DEPARTAMENTO')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'JEFE_DEPARTAMENTO', 'SUPERVISOR')")
     public ResponseEntity<ApiResponse<List<CuelloDeBotellaDTO>>> getCuellosDeBottella() {
         return ResponseEntity.ok(ApiResponse.ok(analyticsService.getCuellosDeBottella()));
     }
@@ -36,10 +37,18 @@ public class AnalyticsController {
                description = "Retorna duración promedio por nodo dentro del departamento especificado. " +
                              "Incluye total de tareas, tareas retrasadas y porcentaje de retraso.")
     @GetMapping("/departamento/{idDepartamento}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'JEFE_DEPARTAMENTO')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'JEFE_DEPARTAMENTO', 'SUPERVISOR')")
     public ResponseEntity<ApiResponse<List<DeptAnalyticsDTO>>> getRendimientoPorDepartamento(
             @PathVariable String idDepartamento) {
         return ResponseEntity.ok(ApiResponse.ok(
                 analyticsService.getDuracionPromedioPorDepartamento(idDepartamento)));
+    }
+
+    @Operation(summary = "Rendimiento por todos los departamentos",
+               description = "Ranking de todos los departamentos con total de tareas, retrasadas y duración promedio.")
+    @GetMapping("/rendimiento-departamentos")
+    @PreAuthorize("hasAnyRole('ADMIN', 'JEFE_DEPARTAMENTO', 'SUPERVISOR')")
+    public ResponseEntity<ApiResponse<List<RendimientoDeptDTO>>> getRendimientoDepartamentos() {
+        return ResponseEntity.ok(ApiResponse.ok(analyticsService.getRendimientoPorDepartamentos()));
     }
 }
