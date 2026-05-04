@@ -19,7 +19,11 @@ public class CorsConfig {
             "http://18.222.251.205",
             "http://18.222.251.205:80",
             "http://18.222.251.205:4200",
-            "http://18.222.251.205:8000"
+            "http://18.222.251.205:8000",
+            "http://18.224.95.208",
+            "http://18.224.95.208:80",
+            "http://18.224.95.208:4200",
+            "http://18.224.95.208:8000"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));

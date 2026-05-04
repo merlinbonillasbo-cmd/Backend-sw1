@@ -27,7 +27,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                     "http://18.222.251.205",
                     "http://18.222.251.205:80",
                     "http://18.222.251.205:4200",
-                    "http://18.222.251.205:8000"
+                    "http://18.222.251.205:8000",
+                    "http://18.224.95.208",
+                    "http://18.224.95.208:80",
+                    "http://18.224.95.208:4200",
+                    "http://18.224.95.208:8000"
                 )
                 .withSockJS();
     }
