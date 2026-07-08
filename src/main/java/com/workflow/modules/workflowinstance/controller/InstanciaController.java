@@ -25,6 +25,9 @@ import jakarta.validation.constraints.NotBlank;
 import java.util.List;
 import java.util.Map;
 import org.springframework.security.core.context.SecurityContextHolder;
+import com.workflow.modules.history.model.AuditLog;
+import com.workflow.modules.history.service.HistorialService;
+import java.time.Instant;
 
 @RestController
 @RequestMapping("/api/v1/instancias")
@@ -34,6 +37,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 public class InstanciaController {
 
     private final InstanciaService instanciaService;
+    private final HistorialService historialService;
 
     @Operation(summary = "Listar instancias", description = "Retorna lista paginada de todas las instancias de proceso")
     @GetMapping
@@ -191,6 +195,23 @@ public class InstanciaController {
         }
         ProcessInstance instancia = instanciaService.iniciarFlujo(
             request.getIdPolitica(), request.getIdCliente(), request.getNodoInicioId(), request.getNombreFlujo(), idDepartamento);
+        try {
+            String actor = principal != null ? principal.getUsername() : "desconocido";
+            String nombreFlujoFinal = "Flujo sin nombre";
+            if (instancia.getDatosProceso() != null && instancia.getDatosProceso().containsKey("nombreFlujo")) {
+                nombreFlujoFinal = (String) instancia.getDatosProceso().get("nombreFlujo");
+            }
+            historialService.create(AuditLog.builder()
+                    .action("INICIAR_FLUJO")
+                    .actorId(actor)
+                    .comment("Iniciado el trámite '" + nombreFlujoFinal + "' para el cliente " + (request.getIdCliente() != null ? request.getIdCliente() : "Anónimo") + " (Instancia: " + instancia.getId() + ")")
+                    .processInstanceId(instancia.getId())
+                    .workflowDefinitionId(instancia.getIdPolitica())
+                    .timestamp(Instant.now())
+                    .build());
+        } catch (Exception e) {
+            // Ignore log error
+        }
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created("Flujo iniciado exitosamente", instancia));
     }

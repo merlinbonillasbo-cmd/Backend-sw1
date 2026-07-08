@@ -18,6 +18,8 @@ import com.workflow.modules.workflowdefinition.model.WorkflowDefinition;
 import com.workflow.modules.workflowdefinition.repository.WorkflowDefinitionRepository;
 import com.workflow.modules.workflowinstance.model.ProcessInstance;
 import com.workflow.modules.workflowinstance.repository.ProcessInstanceRepository;
+import com.workflow.modules.history.model.AuditLog;
+import com.workflow.modules.history.repository.AuditLogRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -62,6 +64,7 @@ public class WorkflowEngine {
     private final NotificationRepository notificationRepo;
     private final SimpMessagingTemplate messaging;
     private final DepartmentRepository departmentRepository;
+    private final AuditLogRepository auditLogRepository;
 
     // Reutilizable; SpelExpressionParser es thread-safe
     private final ExpressionParser spelParser = new SpelExpressionParser();
@@ -213,6 +216,23 @@ public class WorkflowEngine {
         tarea.setFechaInicio(Instant.now());
         activeTaskRepo.save(tarea);
 
+        // Registrar en auditoría
+        try {
+            String etiquetaNodo = resolverEtiquetaNodo(tarea.getIdPolitica(), tarea.getIdNodo());
+            auditLogRepository.save(AuditLog.builder()
+                    .processInstanceId(tarea.getIdInstancia())
+                    .workflowDefinitionId(tarea.getIdPolitica())
+                    .nodeId(tarea.getIdNodo())
+                    .nodeLabel(etiquetaNodo)
+                    .actorId(nombreUsuario != null ? nombreUsuario : usuarioId)
+                    .action("TOMAR_TAREA")
+                    .comment("El usuario " + (nombreUsuario != null ? nombreUsuario : usuarioId) + " tomó la tarea '" + etiquetaNodo + "'.")
+                    .timestamp(Instant.now())
+                    .build());
+        } catch (Exception e) {
+            // Ignore audit log error
+        }
+
         log.info("[WorkflowEngine] Tarea {} reclamada por usuario {} (ROJO→AMARILLO)", tareaId, usuarioId);
         return tarea;
     }
@@ -263,6 +283,23 @@ public class WorkflowEngine {
                 .datos(formData)
                 .build();
         historyRepo.save(historial);
+
+        // Registrar en auditoría
+        try {
+            auditLogRepository.save(AuditLog.builder()
+                    .processInstanceId(tarea.getIdInstancia())
+                    .workflowDefinitionId(tarea.getIdPolitica())
+                    .nodeId(tarea.getIdNodo())
+                    .nodeLabel(etiquetaNodo)
+                    .actorId(tarea.getNombreUsuario() != null ? tarea.getNombreUsuario() : tarea.getIdUsuarioAsignado())
+                    .action("COMPLETAR_TAREA")
+                    .comment("La tarea '" + etiquetaNodo + "' fue completada por " + (tarea.getNombreUsuario() != null ? tarea.getNombreUsuario() : tarea.getIdUsuarioAsignado()) + ".")
+                    .formData(formData)
+                    .timestamp(fechaArchivo)
+                    .build());
+        } catch (Exception e) {
+            // Ignore audit log error
+        }
 
         // Marcar semáforo VERDE (log de auditoría)
         tarea.setSemaforo(TrafficLight.VERDE);

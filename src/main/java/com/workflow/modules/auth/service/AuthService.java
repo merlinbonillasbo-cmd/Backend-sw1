@@ -12,6 +12,8 @@ import com.workflow.modules.sessions.repository.SessionRepository;
 import com.workflow.modules.users.model.User;
 import com.workflow.modules.users.repository.UserRepository;
 import com.workflow.security.JwtService;
+import com.workflow.modules.history.model.AuditLog;
+import com.workflow.modules.history.repository.AuditLogRepository;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -30,19 +32,22 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final PasswordEncoder passwordEncoder;
     private final DepartmentService departmentService;
+    private final AuditLogRepository auditLogRepository;
 
     public AuthService(UserRepository userRepository,
                        SessionRepository sessionRepository,
                        JwtService jwtService,
                        AuthenticationManager authenticationManager,
                        PasswordEncoder passwordEncoder,
-                       DepartmentService departmentService) {
+                       DepartmentService departmentService,
+                       AuditLogRepository auditLogRepository) {
         this.userRepository = userRepository;
         this.sessionRepository = sessionRepository;
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
         this.passwordEncoder = passwordEncoder;
         this.departmentService = departmentService;
+        this.auditLogRepository = auditLogRepository;
     }
 
     public LoginResponse registro(RegistroRequest request) {
@@ -125,6 +130,14 @@ public class AuthService {
         String token = jwtService.generateTokenWithDept(user, departamentoCodigo, departamentoNombre);
         saveSession(user, token);
 
+        // Registrar inicio de sesión en auditoría
+        auditLogRepository.save(AuditLog.builder()
+                .action("INICIO_SESION")
+                .actorId(user.getCorreo())
+                .comment("El usuario " + user.getNombreCompleto() + " (" + user.getCorreo() + ") inició sesión.")
+                .timestamp(Instant.now())
+                .build());
+
         return LoginResponse.builder()
                 .token(token)
                 .correo(user.getCorreo())
@@ -140,7 +153,17 @@ public class AuthService {
 
     public void logout(String token) {
         sessionRepository.findByTokenAcceso(token)
-                .ifPresent(sessionRepository::delete);
+                .ifPresent(session -> {
+                    userRepository.findById(session.getIdUsuario()).ifPresent(user -> {
+                        auditLogRepository.save(AuditLog.builder()
+                                .action("CERRAR_SESION")
+                                .actorId(user.getCorreo())
+                                .comment("El usuario " + user.getNombreCompleto() + " (" + user.getCorreo() + ") cerró sesión.")
+                                .timestamp(Instant.now())
+                                .build());
+                    });
+                    sessionRepository.delete(session);
+                });
     }
 
     private void saveSession(User user, String token) {

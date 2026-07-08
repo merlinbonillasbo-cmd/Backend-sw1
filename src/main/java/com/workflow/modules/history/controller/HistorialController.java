@@ -30,7 +30,7 @@ public class HistorialController {
 
     @Operation(summary = "Listar registros de historial", description = "Retorna lista paginada de todos los registros de auditoría")
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'JEFE_DEPARTAMENTO')")
+    @PreAuthorize("hasAnyRole('ADM_DISENADOR', 'SUPERVISOR', 'ADMIN', 'JEFE_DEPARTAMENTO')")
     public ResponseEntity<ApiResponse<Page<AuditLog>>> findAll(
             @PageableDefault(size = 20) Pageable pageable) {
         return ResponseEntity.ok(ApiResponse.ok(historialService.findAllAuditLogs(pageable)));
@@ -38,7 +38,7 @@ public class HistorialController {
 
     @Operation(summary = "Obtener registro de historial por ID")
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'JEFE_DEPARTAMENTO', 'ANALISTA')")
+    @PreAuthorize("hasAnyRole('ADM_DISENADOR', 'SUPERVISOR', 'ADMIN', 'JEFE_DEPARTAMENTO', 'ANALISTA')")
     public ResponseEntity<ApiResponse<AuditLog>> findById(@PathVariable String id) {
         return ResponseEntity.ok(ApiResponse.ok(historialService.findAuditLogById(id)));
     }
@@ -51,7 +51,7 @@ public class HistorialController {
 
     @Operation(summary = "Listar historial por actor")
     @GetMapping("/actor/{idActor}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'JEFE_DEPARTAMENTO')")
+    @PreAuthorize("hasAnyRole('ADM_DISENADOR', 'SUPERVISOR', 'ADMIN', 'JEFE_DEPARTAMENTO')")
     public ResponseEntity<ApiResponse<List<AuditLog>>> findByActor(@PathVariable String idActor) {
         return ResponseEntity.ok(ApiResponse.ok(historialService.findByActor(idActor)));
     }

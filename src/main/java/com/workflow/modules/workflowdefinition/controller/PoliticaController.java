@@ -22,6 +22,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import com.workflow.modules.users.model.User;
+import com.workflow.modules.history.model.AuditLog;
+import com.workflow.modules.history.service.HistorialService;
 import jakarta.validation.Valid;
 import java.time.Instant;
 import java.util.List;
@@ -37,6 +39,7 @@ public class PoliticaController {
     private final WorkflowDefinitionService service;
     private final SimpMessagingTemplate messaging;
     private final UserRepository userRepository;
+    private final HistorialService historialService;
 
     @Operation(summary = "Listar políticas", description = "Retorna lista paginada de todas las definiciones de workflow")
     @GetMapping
@@ -83,8 +86,21 @@ public class PoliticaController {
         if (dto.getColaboradores() == null) {
             dto.setColaboradores(List.of());
         }
+        WorkflowDefinition result = service.create(dto);
+        try {
+            String actor = principal != null ? principal.getUsername() : "desconocido";
+            historialService.create(AuditLog.builder()
+                    .action("CREAR_POLITICA")
+                    .actorId(actor)
+                    .comment("Creada la política: " + result.getTitulo() + " (ID: " + result.getId() + ")")
+                    .workflowDefinitionId(result.getId())
+                    .timestamp(Instant.now())
+                    .build());
+        } catch (Exception e) {
+            // Ignore log error
+        }
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.created("Política creada exitosamente", service.create(dto)));
+                .body(ApiResponse.created("Política creada exitosamente", result));
     }
 
     @Operation(summary = "Actualizar política completa")
@@ -104,6 +120,18 @@ public class PoliticaController {
         }
 
         WorkflowDefinition actualizado = service.update(id, dto);
+        try {
+            String actor = principal != null ? principal.getUsername() : "desconocido";
+            historialService.create(AuditLog.builder()
+                    .action("MODIFICAR_POLITICA")
+                    .actorId(actor)
+                    .comment("Modificada la política: " + actualizado.getTitulo() + " (ID: " + actualizado.getId() + ")")
+                    .workflowDefinitionId(actualizado.getId())
+                    .timestamp(Instant.now())
+                    .build());
+        } catch (Exception e) {
+            // Ignore log error
+        }
 
         // Emitir por WebSocket para sincronizar otros diseñadores conectados
         String editadoPor = principal != null ? principal.getUsername() : "desconocido";
@@ -137,6 +165,18 @@ public class PoliticaController {
         }
 
         WorkflowDefinition actualizado = service.update(id, dto);
+        try {
+            String actor = principal != null ? principal.getUsername() : "desconocido";
+            historialService.create(AuditLog.builder()
+                    .action("MODIFICAR_POLITICA")
+                    .actorId(actor)
+                    .comment("Modificada parcialmente la política: " + actualizado.getTitulo() + " (ID: " + actualizado.getId() + ")")
+                    .workflowDefinitionId(actualizado.getId())
+                    .timestamp(Instant.now())
+                    .build());
+        } catch (Exception e) {
+            // Ignore log error
+        }
 
         String editadoPor = principal != null ? principal.getUsername() : "desconocido";
         String editadoPorNombre = principal instanceof User u ? u.getNombreCompleto() : editadoPor;
@@ -160,7 +200,20 @@ public class PoliticaController {
             @AuthenticationPrincipal UserDetails principal) {
         WorkflowDefinition def = service.findById(id);
         validarAcceso(def, obtenerUserId(principal));
-        return ResponseEntity.ok(ApiResponse.ok("Política publicada exitosamente", service.publish(id)));
+        WorkflowDefinition result = service.publish(id);
+        try {
+            String actor = principal != null ? principal.getUsername() : "desconocido";
+            historialService.create(AuditLog.builder()
+                    .action("PUBLICAR_POLITICA")
+                    .actorId(actor)
+                    .comment("Publicada la política: " + result.getTitulo() + " (ID: " + result.getId() + ")")
+                    .workflowDefinitionId(result.getId())
+                    .timestamp(Instant.now())
+                    .build());
+        } catch (Exception e) {
+            // Ignore log error
+        }
+        return ResponseEntity.ok(ApiResponse.ok("Política publicada exitosamente", result));
     }
 
     @Operation(summary = "Revertir política a borrador (cambiar estado a BORRADOR)")
@@ -171,7 +224,20 @@ public class PoliticaController {
             @AuthenticationPrincipal UserDetails principal) {
         WorkflowDefinition def = service.findById(id);
         validarAcceso(def, obtenerUserId(principal));
-        return ResponseEntity.ok(ApiResponse.ok("Política revertida a borrador", service.revertir(id)));
+        WorkflowDefinition result = service.revertir(id);
+        try {
+            String actor = principal != null ? principal.getUsername() : "desconocido";
+            historialService.create(AuditLog.builder()
+                    .action("REVERTIR_POLITICA")
+                    .actorId(actor)
+                    .comment("Revertida a borrador la política: " + result.getTitulo() + " (ID: " + result.getId() + ")")
+                    .workflowDefinitionId(result.getId())
+                    .timestamp(Instant.now())
+                    .build());
+        } catch (Exception e) {
+            // Ignore log error
+        }
+        return ResponseEntity.ok(ApiResponse.ok("Política revertida a borrador", result));
     }
 
     @Operation(summary = "Eliminar política")
@@ -183,6 +249,18 @@ public class PoliticaController {
         WorkflowDefinition def = service.findById(id);
         validarAcceso(def, obtenerUserId(principal));
         service.delete(id);
+        try {
+            String actor = principal != null ? principal.getUsername() : "desconocido";
+            historialService.create(AuditLog.builder()
+                    .action("ELIMINAR_POLITICA")
+                    .actorId(actor)
+                    .comment("Eliminada la política: " + def.getTitulo() + " (ID: " + def.getId() + ")")
+                    .workflowDefinitionId(def.getId())
+                    .timestamp(Instant.now())
+                    .build());
+        } catch (Exception e) {
+            // Ignore log error
+        }
         return ResponseEntity.ok(ApiResponse.ok("Política eliminada", null));
     }
 
